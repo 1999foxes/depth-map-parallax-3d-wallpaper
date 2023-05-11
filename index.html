@@ -1,0 +1,37 @@
+<html>
+
+<head>
+    <title>My Three.js Scene</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            margin-top: calc(-25vw + 25vh);
+            display: block;
+        }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+
+<body>
+    <video id="video" loop crossOrigin="anonymous" playsinline style="display:none">
+        <source src="eva.webm" type='video/webm'>
+    </video>
+    <video id="videoDepth" loop crossOrigin="anonymous" playsinline style="display:none">
+        <source src="evadepth.webm" type='video/webm'>
+    </video>
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>
