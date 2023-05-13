@@ -3,13 +3,19 @@
 <head>
     <title>My Three.js Scene</title>
     <style>
-        body {
+        * {
             margin: 0;
+            padding: 0;
+        }
+        body {
             overflow: hidden;
         }
 
         canvas {
-            margin-top: calc(-25vw + 25vh);
+            position: fixed;
+            z-index: -1;
+            top: calc(min(0px, 50vh - 50vw * 1080 / 1920));
+            left: calc(min(0px, 50vw - 50vh / 1080 * 1920));
             display: block;
         }
     </style>
@@ -25,12 +31,20 @@
 </head>
 
 <body>
-    <video id="video" loop crossOrigin="anonymous" playsinline style="display:none">
-        <source src="eva.webm" type='video/webm'>
+
+    <div id="cover" style="color: red; text-align: center; padding-top: 40vh; font-size: xx-large; position: fixed; width: 100vw; height: 100vh;" onclick="this.remove()">CLICK TO PLAY</div>
+
+    <video id="video" playsinline style="display:none">
+        <source src="video.webm" type='video/webm'/>
+        <!-- <source src="test_images/hutao.webm" type='video/webm'/> -->
     </video>
-    <video id="videoDepth" loop crossOrigin="anonymous" playsinline style="display:none">
-        <source src="evadepth.webm" type='video/webm'>
+    <video id="videoDepth" playsinline style="display:none">
+        <source src="depth.webm" type='video/webm'/>
+        <!-- <source src="test_images/hutaodepth.webm" type='video/webm'/> -->
     </video>
+    <audio id="audio" playsinline style="display:none">
+        <source src="audio.mp3"/>
+    </audio>
     <script type="module" src="main.js"></script>
 </body>
 

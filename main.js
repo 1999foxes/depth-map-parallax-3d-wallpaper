@@ -3,27 +3,51 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
+// polyfill
+Number.prototype.clamp = function (min, max) {
+  return Math.min(Math.max(this, min), max);
+};
 
 // Create a scene, camera and renderer
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 var renderer = new THREE.WebGLRenderer();
-var size = Math.max(window.innerHeight, window.innerWidth);
-var aspectRatio = 1;
-renderer.setSize(size, size * aspectRatio);
+var aspectRatio = 1080 / 1920;
+var width = Math.max(window.innerWidth, window.innerHeight / aspectRatio);
+renderer.setSize(width, width * aspectRatio); 
+console.log(width,window.innerWidth, window.innerHeight / aspectRatio);
 document.body.appendChild(renderer.domElement);
 
-// Load the png textures using a TextureLoader
-var textureLoader = new THREE.TextureLoader();
-// var texture1 = await textureLoader.loadAsync('noise.png');  // debug
-// var texture1 = await textureLoader.loadAsync('image.png');
-// var texture2 = await textureLoader.loadAsync('depth.png');
+// Load the 2 textures
 
-const video = document.getElementById( 'video' );
-const texture1 = new THREE.VideoTexture( video );
+// var textureLoader = new THREE.TextureLoader();
+// var texture1 = await textureLoader.loadAsync('test_images/noise.png');  // debug
+// var texture1 = await textureLoader.loadAsync('test_images/hutao.png');
+// var texture2 = await textureLoader.loadAsync('test_images/hutaodepth.png');
 
-const videoDepth = document.getElementById( 'videoDepth' );
-const texture2 = new THREE.VideoTexture( videoDepth );
+const video = document.getElementById('video');
+const texture1 = new THREE.VideoTexture(video);
+
+const videoDepth = document.getElementById('videoDepth');
+const texture2 = new THREE.VideoTexture(videoDepth);
+
+const audio = document.getElementById('audio');
+
+audio.onended = (event) => {
+  console.log("ended, looping.");
+
+  video.pause();
+  videoDepth.pause();
+  audio.pause();
+
+  video.currentTime = 0;
+  videoDepth.currentTime = 0;
+  audio.currentTime = 0;
+
+  video.play();
+  videoDepth.play();
+  audio.play();
+}
 
 // Create a composer for post processing
 var composer = new EffectComposer(renderer);
@@ -34,12 +58,12 @@ composer.addPass(renderPass);
 
 // Create a shader pass with a custom shader and add it to the composer
 var shaderPass = new ShaderPass({
-    uniforms: {
-        tImage: {value: texture1},
-        tDepth: {value: texture2},
-        mouse: {value: new THREE.Vector2()}
-    },
-    vertexShader: `
+  uniforms: {
+    tImage: { value: texture1 },
+    tDepth: { value: texture2 },
+    mouse: { value: new THREE.Vector2() }
+  },
+  vertexShader: `
         varying vec2 vUv;
         varying vec4 vPos;
         void main() {
@@ -48,7 +72,7 @@ var shaderPass = new ShaderPass({
             gl_Position = projectionMatrix * vPos;
         }
     `,
-    fragmentShader: `// http://panrafal.github.com/depthy
+  fragmentShader: `// http://panrafal.github.com/depthy
     precision mediump float;
     
     varying vec2 vUv;
@@ -94,7 +118,7 @@ var shaderPass = new ShaderPass({
       vec2 pos = vec2(vUv[0] - 0.5, 0.5 - vUv[1]) / vec2(upscale) + vec2(0.5);
 
       //                             [focus]                       [scale up]
-      mat2 vector = mat2(vec2((0.5 - 0.5) * mouse - mouse/2.0) * vec2(1.5, -1.5), 
+      mat2 vector = mat2(vec2((0.5 - 0.01) * mouse - mouse/2.0) * vec2(1.5, -1.5), 
                              vec2((0.5 - 0.015) * mouse + mouse/2.0) * vec2(1.5, -1.5));
                              
       // perspective shift
@@ -144,50 +168,46 @@ composer.addPass(shaderPass);
 
 // Create a plane geometry and material and add it to the scene
 var geometry = new THREE.PlaneGeometry(2, 2);
-var material = new THREE.MeshBasicMaterial({color: 0xffffff});
+var material = new THREE.MeshBasicMaterial({ color: 0xffffff });
 var plane = new THREE.Mesh(geometry, material);
 scene.add(plane);
 
 // Add an event listener for mouse move
-window.addEventListener('mousemove', function(event) {
-    // normalize the mouse position from -0.5 to 0.5
-    var x = (event.clientX / window.innerWidth) - 0.5;
-    var y = 0.5 - (event.clientY / window.innerHeight);
-
-    x *= 0.05; y *= 0.05;
-
-    const limit = 0.01
-    if (x > limit) x = limit;
-    else if (x < -limit) x = -limit;
-    if (y > limit) y = limit;
-    else if (y < -limit) y = -limit;
-
-    // update the shader uniform
-    shaderPass.uniforms.mouse.value.set(x, y);
+var mouseX = 0, mouseY = 0;
+window.addEventListener('mousemove', function (event) {
+  // normalize the mouse position from -0.5 to 0.5
+  mouseX = (event.clientX / window.innerWidth) - 0.5;
+  mouseY = 0.5 - (event.clientY / window.innerHeight);
 });
 
 // Animate the scene
 let clock = new THREE.Clock();
-let delta = 0;
-// 30 fps
-let interval = 1 / 30;
+let frameDelta = 0, frameInterval = 1 / 30;
+let x = mouseX, y = mouseY;
 function animate() {
-    requestAnimationFrame(animate);
-    delta += clock.getDelta();
-    if (delta  < interval) return;
+  requestAnimationFrame(animate);
+  const clockDelta = clock.getDelta();
+
+  frameDelta += clockDelta;
+  if (frameDelta > frameInterval) {
+    x = mouseX * 0.2 + x * 0.8, y = mouseY * 0.2 + y * 0.8;
+    shaderPass.uniforms.mouse.value.set((x * 0.03).clamp(-0.015, 0.015), (y * 0.03).clamp(-0.015, 0.015));
     composer.render();
+    frameDelta = 0;
+  }
 }
 
-var handlerFirstClick = function() {
-    var click = 0;
-    return function() {
-        if(click === 0) {
-            video.play();
-            videoDepth.play();
-            animate();
-        }
-        click++;
+var handlerFirstClick = function () {
+  var click = 0;
+  return function () {
+    if (click === 0) {
+      video.play();
+      videoDepth.play();
+      audio.play();
+      animate();
     }
+    click++;
+  }
 }();
 
-document.body.addEventListener("click", handlerFirstClick);
+document.getElementById('cover').addEventListener("click", handlerFirstClick);
