@@ -222,14 +222,9 @@ function animate() {
 // Listen to first click event
 
 var firstClickHandler = function () {
-  var click = 0;
-  return function () {
-    if (click === 0) {
-      mediaPlay();
-      animate();
-    }
-    click++;
-  }
-}();
+  mediaPlay();
+  animate();
+  this.remove();
+}
 
 document.getElementById('cover').addEventListener("click", firstClickHandler);
