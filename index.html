@@ -30,6 +30,12 @@
             width: 100vw;
             height: 100vh;
         }
+        #info {
+            position: fixed;
+            color: red;
+            text-align: left;
+            font-size: 1vw;
+        }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
@@ -45,21 +51,7 @@
 <body>
 
     <div id="cover">CLICK TO PLAY</div>
-
-    <video id="video" playsinline style="display:none">
-        <source src="video.webm" type='video/webm' />
-        <!-- <source src="test_images/hutao.webm" type='video/webm'/> -->
-    </video>
-
-    <!-- <video id="videoDepth" playsinline style="display:none">
-        <source src="depth.webm" type='video/webm'/> -->
-    <!-- <source src="test_images/hutaodepth.webm" type='video/webm'/> -->
-
-    <!-- </video> -->
-    <!-- <audio id="audio" playsinline style="display:none">
-        <source src="audio.mp3"/>
-    </audio> -->
-
+    <div id="info"></div>
     <script type="module" src="main.js"></script>
     
 </body>

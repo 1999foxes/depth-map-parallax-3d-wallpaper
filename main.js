@@ -10,6 +10,14 @@ Number.prototype.clamp = function (min, max) {
   return Math.min(Math.max(this, min), max);
 };
 
+function info(str) {
+  const p = document.createElement('p');
+  p.textContent = str;
+  document.getElementById('info').appendChild(p);
+  window.setTimeout(() => p.remove(), 1000 * 10);
+}
+info("Starting...");
+
 
 // Create a scene, camera and renderer
 
@@ -26,43 +34,156 @@ document.body.appendChild(renderer.domElement);
 
 // Load the 2 textures from video or png
 
-var textureLoader = new THREE.TextureLoader();
+function loadVideoTexture(id, src) {
+  let video = document.getElementById(id);
+  if (video == null) {
+    video = document.createElement("video");
+    video.id = id;
+    video.type = 'video/webm';
+    video.style.display = 'none';
+    document.body.appendChild(video);
+  }
+  video.src = src;
+  return new Promise((resolve, reject) => {
+    video.oncanplay = function () {
+      resolve(new THREE.VideoTexture(video));
+    };
+    video.onerror = function () {
+      video.remove();
+      reject(new Error("Video source not loaded"));
+    };
+  });
+}
 
-var video = document.getElementById('video');
-const texture1 = video != null ?
-  new THREE.VideoTexture(video) :
-  await textureLoader.loadAsync('image.png');
+async function loadPngTexture(src) {
+  var textureLoader = new THREE.TextureLoader();
+  return await textureLoader.loadAsync(src);
+}
 
-var videoDepth = document.getElementById('videoDepth');
-const texture2 = videoDepth != null ?
-  new THREE.VideoTexture(videoDepth) :
-  await textureLoader.loadAsync('depth.png');
+var texture1 = null;
+try {
+  texture1 = await loadVideoTexture('video', 'video.webm')
+} catch {
+  texture1 = await loadPngTexture('image.png');
+}
 
-const audio = document.getElementById('audio');
+var texture2 = null;
+try {
+  texture2 = await loadVideoTexture('videoDepth', 'videoDepth.webm')
+} catch {
+  texture2 = await loadPngTexture('imageDepth.png');
+}
+
+window.wallpaperPropertyListener = {
+  applyUserProperties: function (properties) {
+    document.getElementById('video')?.remove();
+    if (properties.video && properties.video.value.length > 0) {
+      const file = 'file:///' + properties.video.value;
+      info('Loading ' + file);
+      loadVideoTexture('video', file)
+        .catch(
+          () => {
+            if (properties.image && properties.image.value.length > 0) return Promise.reject();
+            info("'" + file + "' fail to load, load 'video.webm' instead.");
+            return loadVideoTexture('video', 'video.webm')
+          }
+        )
+        .then(t => {
+          info("Video loaded.");
+          if (document.getElementById('cover') == null) mediaPlay();
+          texture1 = t;
+          shaderPass.uniforms.tImage.value = texture1;
+        });
+    }
+
+    if (properties.videodepth && properties.videodepth.value.length > 0) {
+      document.getElementById('videoDepth')?.remove();
+      const file = 'file:///' + properties.videodepth.value;
+      info('Loading depth video: ' + file);
+      loadVideoTexture('videoDepth', file)
+        .catch(
+          () => {
+            info("'" + file + "' fail to load, load 'videoDepth.webm' instead.");
+            return loadVideoTexture('videoDepth', 'videoDepth.webm');
+          }
+        )
+        .then(t => {
+          info("Depth video loaded.");
+          if (document.getElementById('cover') == null) mediaPlay();
+          texture2 = t;
+          shaderPass.uniforms.tDepth.value = texture2;
+        });
+    }
+
+    if (properties.image && properties.image.value.length > 0) {
+      document.getElementById('video')?.remove();
+      const file = 'file:///' + properties.image.value;
+      info('Loading image: ' + file);
+      loadPngTexture(file)
+        .catch(
+          () => {
+            info("'" + file + "' fail to load, load 'image.png' instead.");
+            return loadPngTexture('image.png');
+          }
+        )
+        .then(t => {
+          info("Image loaded.");
+          if (document.getElementById('cover') == null) mediaPlay();
+          texture1 = t;
+          shaderPass.uniforms.tImage.value = texture1;
+        });
+    }
+
+    if (properties.imagedepth && properties.imagedepth.value.length > 0) {
+      document.getElementById('videoDepth')?.remove();
+      const file = 'file:///' + properties.imagedepth.value;
+      info('Loading depth image: ' + file);
+      loadPngTexture(file)
+        .catch(
+          () => {
+            info("'" + file + "' fail to load, load 'imageDepth.png' instead.");
+            return loadPngTexture('imageDepth.png');
+          }
+        )
+        .then(t => {
+          info("Depth image loaded.");
+          if (document.getElementById('cover') == null) mediaPlay();
+          texture2 = t;
+          shaderPass.uniforms.tDepth.value = texture2;
+        });
+    }
+    
+    if (properties.test) {
+    }
+  },
+};
+
+
+
+// media control
 
 function mediaPlay() {
-  if (video != null) {
-    video.pause();
-    video.currentTime = 0;
-    video.play();
-  }
-
-  if (videoDepth != null) {
-    videoDepth.pause();
-    videoDepth.currentTime = 0;
-    videoDepth.play();
-  }
-
-  if (audio != null) {
-    audio.pause();
-    audio.currentTime = 0;
-    audio.play();
+  var media = document.querySelectorAll("video, audio");
+  for (var i = 0; i < media.length; i++) {
+    var m = media[i];
+    m.pause();
+    m.currentTime = 0;
+    m.play();
+    m.onended = () => {info(m.id); mediaPlay();};
   }
 }
 
-video && (video.onended = mediaPlay);
-videoDepth && (videoDepth.onended = mediaPlay);
-audio && (audio.onended = mediaPlay);
+function loadAudio(src) {
+  let audio = [...document.getElementsByClassName('audio')][0];
+  if (audio == null) {
+    audio = document.createElement("audio");
+    audio.style.display = 'none';
+    document.body.appendChild(audio);
+  }
+  audio.src = src;
+  audio.onerror = function () { audio.remove() };
+}
+loadAudio('audio.mp3');
 
 
 // Set up post processing
@@ -133,7 +254,7 @@ var shaderPass = new ShaderPass({
       vec2 pos = vec2(vUv[0] - 0.5, 0.5 - vUv[1]) / vec2(upscale) + vec2(0.5);
 
       //                             [focus]                       [scale up]
-      mat2 vector = mat2(vec2((0.5 - 0.01) * mouse - mouse/2.0) * vec2(1.5, -1.5), 
+      mat2 vector = mat2(vec2((0.5 - 0.99) * mouse - mouse/2.0) * vec2(1.5, -1.5), 
                              vec2((0.5 - 0.015) * mouse + mouse/2.0) * vec2(1.5, -1.5));
                              
       // perspective shift
@@ -225,6 +346,7 @@ var firstClickHandler = function () {
   mediaPlay();
   animate();
   this.remove();
+  console.log(texture1, texture2);
 }
 
 document.getElementById('cover').addEventListener("click", firstClickHandler);
