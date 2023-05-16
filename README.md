@@ -9,4 +9,5 @@ steam workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=297649829
 The two txt files are shader patches for Genshin Impact to display the depth map (injected using 3dmogoto). It will take effect after enabling the depth of field effect in camera mode.)
 
 视频预览与说明 https://www.bilibili.com/video/BV1nV4y1k7a6
+
 demo https://1999foxes.github.io/depth-map-parallax-3d-wallpaper/
