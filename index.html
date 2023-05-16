@@ -9,7 +9,7 @@
         }
 
         body {
-            overflow: hidden;   
+            overflow: hidden;
             font-family: Arial, Helvetica, sans-serif;
         }
 
@@ -30,6 +30,7 @@
             width: 100vw;
             height: 100vh;
         }
+
         #info {
             position: fixed;
             color: red;
@@ -46,14 +47,30 @@
         }
       }
     </script>
+    <script type="module">
+        // Polyfill
+        Number.prototype.clamp = function (min, max) {
+          return Math.min(Math.max(this, min), max);
+        };
+        
+        window.info = function(str) {
+          const p = document.createElement('p');
+          p.textContent = str;
+          document.getElementById('info').appendChild(p);
+          window.setTimeout(() => p.remove(), 1000 * 10);
+        }
+        window.info("Starting...");
+        
+    </script>
+    
+    <script type="module" src="main.js"></script>
 </head>
 
 <body>
 
     <div id="cover">CLICK TO PLAY</div>
     <div id="info"></div>
-    <script type="module" src="main.js"></script>
-    
+
 </body>
 
 </html>

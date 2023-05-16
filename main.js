@@ -5,21 +5,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 
-// Polyfill
-Number.prototype.clamp = function (min, max) {
-  return Math.min(Math.max(this, min), max);
-};
-
-function info(str) {
-  const p = document.createElement('p');
-  p.textContent = str;
-  document.getElementById('info').appendChild(p);
-  window.setTimeout(() => p.remove(), 1000 * 10);
-}
-info("Starting...");
-
-
-// Create a scene, camera and renderer
+// scene set up
 
 var scene = new THREE.Scene();
 
@@ -32,7 +18,7 @@ renderer.setSize(width, width * aspectRatio);
 document.body.appendChild(renderer.domElement);
 
 
-// Load the 2 textures from video or png
+// load textures
 
 function loadVideoTexture(id, src) {
   let video = document.getElementById(id);
@@ -46,6 +32,9 @@ function loadVideoTexture(id, src) {
   video.src = src;
   return new Promise((resolve, reject) => {
     video.oncanplay = function () {
+      const canvas = [...document.getElementsByTagName('canvas')][0];
+      canvas.style.top = `calc(min(0px, 50vh - 50vw * ${video.videoHeight} / ${video.videoWidth}))`;
+      canvas.style.left = `calc(min(0px, 50vw - 50vh / ${video.videoHeight} / ${video.videoWidth}))`;
       resolve(new THREE.VideoTexture(video));
     };
     video.onerror = function () {
@@ -61,35 +50,26 @@ async function loadPngTexture(src) {
 }
 
 var texture1 = null;
-try {
-  texture1 = await loadVideoTexture('video', 'video.webm')
-} catch {
-  texture1 = await loadPngTexture('image.png');
-}
-
 var texture2 = null;
-try {
-  texture2 = await loadVideoTexture('videoDepth', 'videoDepth.webm')
-} catch {
-  texture2 = await loadPngTexture('imageDepth.png');
-}
 
+// this must be done before running anything asynchronously
 window.wallpaperPropertyListener = {
   applyUserProperties: function (properties) {
-    document.getElementById('video')?.remove();
+    window.info('Load properties: ' + Object.entries(properties).filter(e => e[1].value).map(e => e[0] + '=' + e[1].value));
     if (properties.video && properties.video.value.length > 0) {
+      document.getElementById('video')?.remove();
       const file = 'file:///' + properties.video.value;
-      info('Loading ' + file);
+      window.info('Loading ' + file);
       loadVideoTexture('video', file)
         .catch(
           () => {
             if (properties.image && properties.image.value.length > 0) return Promise.reject();
-            info("'" + file + "' fail to load, load 'video.webm' instead.");
+            window.info("'" + file + "' fail to load, load 'video.webm' instead.");
             return loadVideoTexture('video', 'video.webm')
           }
         )
         .then(t => {
-          info("Video loaded.");
+          window.info("Video loaded.");
           if (document.getElementById('cover') == null) mediaPlay();
           texture1 = t;
           shaderPass.uniforms.tImage.value = texture1;
@@ -99,16 +79,16 @@ window.wallpaperPropertyListener = {
     if (properties.videodepth && properties.videodepth.value.length > 0) {
       document.getElementById('videoDepth')?.remove();
       const file = 'file:///' + properties.videodepth.value;
-      info('Loading depth video: ' + file);
+      window.info('Loading depth video: ' + file);
       loadVideoTexture('videoDepth', file)
         .catch(
           () => {
-            info("'" + file + "' fail to load, load 'videoDepth.webm' instead.");
+            window.info("'" + file + "' fail to load, load 'videoDepth.webm' instead.");
             return loadVideoTexture('videoDepth', 'videoDepth.webm');
           }
         )
         .then(t => {
-          info("Depth video loaded.");
+          window.info("Depth video loaded.");
           if (document.getElementById('cover') == null) mediaPlay();
           texture2 = t;
           shaderPass.uniforms.tDepth.value = texture2;
@@ -118,16 +98,16 @@ window.wallpaperPropertyListener = {
     if (properties.image && properties.image.value.length > 0) {
       document.getElementById('video')?.remove();
       const file = 'file:///' + properties.image.value;
-      info('Loading image: ' + file);
+      window.info('Loading image: ' + file);
       loadPngTexture(file)
         .catch(
           () => {
-            info("'" + file + "' fail to load, load 'image.png' instead.");
+            window.info("'" + file + "' fail to load, load 'image.png' instead.");
             return loadPngTexture('image.png');
           }
         )
         .then(t => {
-          info("Image loaded.");
+          window.info("Image loaded.");
           if (document.getElementById('cover') == null) mediaPlay();
           texture1 = t;
           shaderPass.uniforms.tImage.value = texture1;
@@ -137,27 +117,41 @@ window.wallpaperPropertyListener = {
     if (properties.imagedepth && properties.imagedepth.value.length > 0) {
       document.getElementById('videoDepth')?.remove();
       const file = 'file:///' + properties.imagedepth.value;
-      info('Loading depth image: ' + file);
+      window.info('Loading depth image: ' + file);
       loadPngTexture(file)
         .catch(
           () => {
-            info("'" + file + "' fail to load, load 'imageDepth.png' instead.");
+            window.info("'" + file + "' fail to load, load 'imageDepth.png' instead.");
             return loadPngTexture('imageDepth.png');
           }
         )
         .then(t => {
-          info("Depth image loaded.");
+          window.info("Depth image loaded.");
           if (document.getElementById('cover') == null) mediaPlay();
           texture2 = t;
           shaderPass.uniforms.tDepth.value = texture2;
         });
     }
-    
+
     if (properties.test) {
     }
   },
 };
 
+const IS_IN_BROWSER = true;
+if (IS_IN_BROWSER) {
+  try {
+    texture1 = await loadVideoTexture('video', 'video.webm');
+  } catch {
+    texture1 = await loadPngTexture('image.png');
+  }
+
+  try {
+    texture2 = await loadVideoTexture('videoDepth', 'videoDepth.webm');
+  } catch {
+    texture2 = await loadPngTexture('imageDepth.png');
+  }
+}
 
 
 // media control
@@ -169,21 +163,21 @@ function mediaPlay() {
     m.pause();
     m.currentTime = 0;
     m.play();
-    m.onended = () => {info(m.id); mediaPlay();};
+    m.onended = () => { window.info(m.id); mediaPlay(); };
   }
 }
 
-function loadAudio(src) {
-  let audio = [...document.getElementsByClassName('audio')][0];
-  if (audio == null) {
-    audio = document.createElement("audio");
-    audio.style.display = 'none';
-    document.body.appendChild(audio);
-  }
-  audio.src = src;
-  audio.onerror = function () { audio.remove() };
-}
-loadAudio('audio.mp3');
+// function loadAudio(src) {
+//   let audio = [...document.getElementsByClassName('audio')][0];
+//   if (audio == null) {
+//     audio = document.createElement("audio");
+//     audio.style.display = 'none';
+//     document.body.appendChild(audio);
+//   }
+//   audio.src = src;
+//   audio.onerror = function () { audio.remove() };
+// }
+// loadAudio('audio.mp3');
 
 
 // Set up post processing
