@@ -51,7 +51,7 @@ async function loadPngTexture(src) {
 
 var texture1 = null;
 var texture2 = null;
-
+var sensitivity = 1.0;
 // this must be done before running anything asynchronously
 window.wallpaperPropertyListener = {
   applyUserProperties: function (properties) {
@@ -134,6 +134,11 @@ window.wallpaperPropertyListener = {
     }
 
     if (properties.test) {
+      window.info(properties.test.value);
+    }
+
+    if (properties.sensitivity) {
+      sensitivity = properties.sensitivity.value;
     }
   },
 };
@@ -163,7 +168,7 @@ function mediaPlay() {
     m.pause();
     m.currentTime = 0;
     m.play();
-    m.onended = () => { window.info(m.id); mediaPlay(); };
+    m.onended = () => { mediaPlay(); };
   }
 }
 
@@ -326,8 +331,9 @@ function animate() {
   const clockDelta = clock.getDelta();
   frameDelta += clockDelta;
   if (frameDelta > frameInterval) {
-    x = mouseX * 0.2 + x * 0.8, y = mouseY * 0.2 + y * 0.8;
-    shaderPass.uniforms.mouse.value.set((x * 0.03).clamp(-0.015, 0.015), (y * 0.03).clamp(-0.015, 0.015));
+    const k = sensitivity;
+    x = mouseX * 0.1 * k + x * (1 - 0.1 * k), y = mouseY * 0.1 * k + y * (1 - 0.1 * k);
+    shaderPass.uniforms.mouse.value.set((x * 0.015 * k).clamp(-0.008 * k, 0.008 * k), (y * 0.015 * k).clamp(-0.008 * k, 0.008 * k));
     composer.render();
     frameDelta = 0;
   }
